@@ -1,0 +1,2 @@
+DELETE FROM "card";
+DELETE FROM "user";
