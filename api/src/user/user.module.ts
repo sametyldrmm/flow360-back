@@ -7,9 +7,15 @@ import { User } from './entities/user.entity';
 //import { Card } from 'src/card/entities/card.entity';
 //import { CardService } from 'src/card/card.service';
 //import { CardTwo } from 'src/card-two/entities/card-two.entity';
+import { StateModule } from '../state/state.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User]),],
+  imports: [
+    TypeOrmModule.forFeature([User]),
+    StateModule,
+    MailModule,
+  ],
   controllers: [UserController],
   providers: [UserService],
   exports:[UserService],

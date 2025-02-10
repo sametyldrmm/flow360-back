@@ -17,4 +17,29 @@ export class MailController {
       message: result ? 'Email başarıyla gönderildi' : 'Email gönderilemedi',
     };
   }
+
+  @Get('refresh-token')
+  async refreshToken() {
+    try {
+      const tokenInfo = await this.mailService.refreshAccessToken();
+      
+      return {
+        success: true,
+        data: {
+          accessToken: tokenInfo.accessToken,
+          refreshToken: tokenInfo.refreshToken,
+          tokenType: tokenInfo.tokenType,
+          expiryDate: tokenInfo.expiryDate,
+          expiryDateFormatted: tokenInfo.expiryDateFormatted
+        },
+        message: 'Token başarıyla yenilendi'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Token yenileme hatası',
+        error: error.message
+      };
+    }
+  }
 } 

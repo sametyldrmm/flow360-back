@@ -1,51 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as readline from 'readline';
-import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class MailService {
-  constructor(private configService: ConfigService) {}
-  
-  /**
-   * Gmail API istemcisini oluşturur.
-   */
+  constructor() {}
+
   private async getGmailClient() {
-    const SCOPES = ['https://www.googleapis.com/auth/gmail.send'];
-    const tokens = {
-      access_token: 'ya29.a0AXeO80Sq0NxQ-Vw-dJ24O8SKM-PnmHtnYxW_MmvPVP_4tREQ5pzBNlRFSX3TgrDHeU8kftRMpXd9241T1_5vp5bZZQxTRozJWpeFhEFxJvp-Dk94JbTwMSuuiVWM6DD64PfIXA_7TnYfm-zpwIx4ZfrQTMf1J-Iw6Olu6AAqaCgYKAa4SARESFQHGX2Mi8TAUWYtDJ4oPqUDo58vBkQ0175',
-      refresh_token: '1//09B77iEf6ZB6XCgYIARAAGAkSNwF-L9IrT1qCdZqk_Lk1fwVkvWRb25o9MRnKYTereIAkcZvJMpYVsOXh4QqS5oLMb-AkBszYISc',
-      scope: 'https://www.googleapis.com/auth/gmail.send',
-      token_type: 'Bearer',
-      expiry_date: 1739123300203
-    };
-  
-    const clientSecretPath = path.join(
-      process.cwd(),
-      this.configService.get<string>('GOOGLE_CLIENT_SECRET_PATH'),
-    );
-
-    const credentials = JSON.parse(fs.readFileSync(clientSecretPath, 'utf-8'));
-    const { client_id, client_secret, redirect_uris } = credentials.installed || credentials.web;
-
     const oauth2Client = new OAuth2Client(
-      client_id,
-      client_secret,
-      redirect_uris[0]
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_REDIRECT_URI
     );
-
-    // Refresh token'ı direkt .env'den al
-    const refreshToken = tokens.refresh_token;
-    if (!refreshToken) {
-      throw new Error('GOOGLE_REFRESH_TOKEN yapılandırması eksik.');
-    }
 
     oauth2Client.setCredentials({
-      refresh_token: refreshToken,
-      scope: SCOPES.join(' '),
+      refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+      scope: 'https://www.googleapis.com/auth/gmail.send'
     });
 
     return google.gmail({ version: 'v1', auth: oauth2Client });
@@ -60,14 +30,9 @@ export class MailService {
   async sendEmail(toEmail: string, message: string): Promise<boolean> {
     try {
       const gmail = await this.getGmailClient();
-      const senderEmail = this.configService.get<string>('SENDER_EMAIL');
-      if (!senderEmail) {
-        throw new Error('SENDER_EMAIL yapılandırması eksik.');
-      }
 
-      // Email içeriğini oluşturuyoruz
       const emailLines = [
-        `From: ${senderEmail}`,
+        `From: ${process.env.SENDER_EMAIL}`,
         `To: ${toEmail}`,
         'Subject: Flow360 Notification',
         '',
@@ -75,14 +40,12 @@ export class MailService {
       ];
       const emailContent = emailLines.join('\n');
 
-      // Mesajı Base64 (URL-safe) formatına çeviriyoruz
       const encodedMessage = Buffer.from(emailContent)
         .toString('base64')
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
         .replace(/=+$/, '');
 
-      // Gmail API üzerinden mesajı gönderiyoruz
       await gmail.users.messages.send({
         userId: 'me',
         requestBody: {
@@ -94,6 +57,69 @@ export class MailService {
     } catch (error) {
       console.error('Email gönderme hatası:', error);
       return false;
+    }
+  }
+
+  async sendPasswordResetCode(email: string, code: string) {
+    const message = `
+      Şifre Sıfırlama Kodunuz: ${code}
+      
+      Bu kod 5 dakika süreyle geçerlidir.
+    `;
+    
+    return this.sendEmail(email, message);
+  }
+
+  async refreshAccessToken() {
+    try {
+      console.log(process.env.GOOGLE_CLIENT_ID);
+      console.log(process.env.GOOGLE_CLIENT_SECRET);
+      console.log(process.env.GOOGLE_REDIRECT_URI);
+
+      const oauth2Client = new OAuth2Client(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_REDIRECT_URI
+      );
+
+      oauth2Client.setCredentials({
+        refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+        scope: 'https://www.googleapis.com/auth/gmail.send'
+      });
+
+      const response = await oauth2Client.getAccessToken();
+      const accessToken = response.res?.data?.access_token || response.token;
+      const expiryDate = response.res?.data?.expiry_date;
+      
+      console.log('Yeni Access Token:', accessToken);
+      console.log('Tüm Response:', response);
+      
+      // .env için gerekli bilgileri formatlı göster
+      console.log('\n.env için güncel değerler:');
+      console.log('GOOGLE_ACCESS_TOKEN=', accessToken);
+      console.log('GOOGLE_REFRESH_TOKEN=', process.env.GOOGLE_REFRESH_TOKEN);
+      console.log('GOOGLE_TOKEN_TYPE=Bearer');
+      console.log('GOOGLE_TOKEN_EXPIRY=', expiryDate);
+      
+      // Expiry date'i okunabilir formatta göster
+      if (expiryDate) {
+        const expiryDateFormatted = new Date(expiryDate).toLocaleString('tr-TR');
+        console.log('\nToken Geçerlilik Süresi:', expiryDateFormatted);
+      }
+
+      return {
+        accessToken,
+        refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+        tokenType: 'Bearer',
+        expiryDate,
+        expiryDateFormatted: expiryDate ? new Date(expiryDate).toLocaleString('tr-TR') : null
+      };
+    } catch (error) {
+      console.error('Access token yenileme hatası:', error.message);
+      if (error.response) {
+        console.error('Hata detayları:', error.response.data);
+      }
+      throw error;
     }
   }
 }

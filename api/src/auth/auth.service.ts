@@ -10,20 +10,40 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async validateUser(nickname: string, password: string): Promise<any> {
-    const user = await this.userService.findByNickname(nickname);
-    if (user && await bcrypt.compare(password, user.password)) {
-      const { password, ...result } = user;
-      return result;
+  async validateUser(email: string, password: string): Promise<any> {
+    try {
+        const user = await this.userService.findByEmail(email);
+        if (!user) {
+            throw new UnauthorizedException('Kullanıcı bulunamadı');
+        }
+        if (user.password !== password) {
+            throw new UnauthorizedException('Şifre yanlış');
+        }
+
+        const { password: _, ...result } = user;
+        return result;
+    } catch (error) {
+        console.error('Kullanıcı doğrulama hatası:', error);
+        throw new UnauthorizedException('Kimlik doğrulama başarısız');
     }
-    return null;
   }
 
   async login(user: any) {
-    const payload = { nickname: user.nickname, sub: user.id };
-    return {
-      access_token: this.jwtService.sign(payload),
-      user: user
-    };
+    try {
+        
+        const payload = { email: user.email, sub: user.id };
+        const access_token = this.jwtService.sign(payload);
+
+        return {
+            access_token,
+            user: {
+                id: user.id,
+                email: user.email,
+            }
+        };
+    } catch (error) {
+        console.error('Girsiş hatası:', error);
+        throw new UnauthorizedException('Giriş işlemi başarısız');
+    }
   }
 } 
