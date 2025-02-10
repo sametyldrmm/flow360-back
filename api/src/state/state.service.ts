@@ -15,7 +15,7 @@ export class StateService {
   async create(userId: number): Promise<State> {
     const state = this.stateRepository.create({
       formState: false,
-      voteState: 'pending',
+      voteState: '0',
       priceState: false,
       user: { id: userId }
     });

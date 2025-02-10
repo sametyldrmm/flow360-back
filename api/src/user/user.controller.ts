@@ -71,8 +71,8 @@ export class UserController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  // @UseGuards(JwtAuthGuard)
+  // @ApiBearerAuth()
   @ApiOperation({ summary: 'Tüm kullanıcıları listele' })
   @ApiResponse({
     status: 200,

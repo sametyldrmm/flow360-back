@@ -82,6 +82,12 @@ export class UserService {
     // Tüm gerekli alanların dolu olup olmadığını kontrol et
     const isProfileComplete = this.checkProfileCompletion(user);
     
+    // State'i kontrol et, yoksa oluştur
+    const existingState = await this.stateService.findByUserId(id);
+    if (!existingState && isProfileComplete) {
+      await this.stateService.create(id);
+    }
+    
     // State tablosundaki formState'i güncelle
     await this.stateService.updateFormState(id, isProfileComplete);
 
@@ -98,7 +104,9 @@ export class UserService {
       user.tc &&
       user.birthDate &&
       user.city &&
-      user.kvkk
+      user.kvkk &&
+      user.socialMedia &&
+      user.youtube
     );
   }
 
