@@ -53,4 +53,11 @@ export class StateService {
 
     return isValid;
   }
+
+  async updateFormState(userId: number, formState: boolean) {
+    return await this.stateRepository.update(
+      { user:  { id: userId } },
+      { formState }
+    );
+  }
 } 
