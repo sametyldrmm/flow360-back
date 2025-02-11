@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, UseGuards, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -152,8 +152,8 @@ export class UserController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
+  //@UseGuards(JwtAuthGuard)
+  //@ApiBearerAuth()
   @ApiOperation({ summary: 'Kullanıcı sil' })
   @ApiParam({
     name: 'id',
@@ -214,7 +214,44 @@ export class UserController {
     @Body('email') email: string,
     @Body('code') code: string,
   ) {
-    await this.userService.verifyPasswordResetCode(email, code);
+    try {
+        await this.userService.verifyPasswordResetCode(email, code);
+    } catch (error) {
+      console.log("statusCode: 401");
+      return { statusCode: 401, message: 'Hata' };  
+    }
+
+    console.log("statusCvvffode: 200");
     return { statusCode: 200, message: 'Kod doğrulandı' };
+  }
+
+  @Get('email/:email')
+  async getUserIdByEmail(@Param('email') email: string) {
+    try {
+      const user = await this.userService.findByEmail(email);
+      return { id: user.id };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new NotFoundException('Bu email adresi ile kayıtlı kullanıcı bulunamadı');
+      }
+      throw new InternalServerErrorException('Kullanıcı bilgileri alınırken bir hata oluştu');
+    }
+  }
+
+  @Patch('password/:email')
+  @ApiOperation({ summary: 'Şifre güncelle' })
+  async updatePassword(
+    @Param('email') email: string,
+    @Body('password') password: string
+  ) {
+    try {
+        await this.userService.updatePassword(email, password);
+        return { statusCode: 200, message: 'Kod doğrulandı' };
+      } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new NotFoundException('Kullanıcı bulunamadı');
+      }
+      throw new InternalServerErrorException('Şifre güncellenirken bir hata oluştu');
+    }
   }
 }

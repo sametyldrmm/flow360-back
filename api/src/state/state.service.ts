@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { State } from './entities/state.entity';
+import { UpdateStateDto } from './dto/update-state.dto';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class StateService {
@@ -26,9 +28,17 @@ export class StateService {
     return this.stateRepository.findOne({ where: { user: { id: userId } } });
   }
 
-  async update(id: number, updateData: Partial<State>): Promise<State> {
-    await this.stateRepository.update(id, updateData);
-    return this.stateRepository.findOne({ where: { id } });
+  async update(userId: number, updateStateDto: UpdateStateDto) {
+    const state = await this.stateRepository.findOne({
+      where: { user: { id: userId } }
+    });
+
+    if (!state) {
+      throw new NotFoundException('State bulunamadı');
+    }
+
+    const updatedState = Object.assign(state, updateStateDto);
+    return await this.stateRepository.save(updatedState);
   }
 
   saveTemporaryPassword(email: string, code: string) {

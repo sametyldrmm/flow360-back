@@ -110,9 +110,9 @@ export class UserService {
     );
   }
 
-  async remove(id: number): Promise<void> {
-    const user = await this.findOne(id);
-    await this.userRepository.remove(user);
+  async remove(id: number) {
+    await this.stateRepository.delete({ user: { id } });
+    await this.userRepository.delete(id);
   }
 
   /*
@@ -134,11 +134,21 @@ export class UserService {
   }
 
   async verifyPasswordResetCode(email: string, code: string): Promise<boolean> {
+    console.log(email,code);
     const isValid = this.stateService.verifyTemporaryPassword(email, code);
+    console.log(isValid);
     if (!isValid) {
       throw new UnauthorizedException('Geçersiz veya süresi dolmuş kod');
     }
     return true;
+  }
+
+  async updatePassword(email: string, password: string): Promise<{ ok: boolean }> {
+    const user = await this.findByEmail(email);
+    console.log(user);
+    user.password = password;
+    await this.userRepository.save(user);
+    return { ok: true };
   }
 }
 

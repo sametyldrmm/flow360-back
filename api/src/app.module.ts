@@ -20,3 +20,6 @@ import { StateModule } from './state/state.module';
   providers: [AppService],
 })
 export class AppModule {}
+
+// Kanka update bir tane error durumu koyucaz eğerki statelerde  ....
+  
