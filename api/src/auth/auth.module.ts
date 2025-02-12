@@ -9,11 +9,13 @@ import { IPList } from './entities/ip-list.entity';
 import { IPListController } from './controllers/ip-list.controller';
 import { IPListService } from './services/ip-list.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { SecurityModule } from '../security/security.module';
 
 @Module({
   imports: [
     UserModule,
     PassportModule,
+    SecurityModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'gizli-anahtar',
       signOptions: { expiresIn: '1d' },

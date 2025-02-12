@@ -1,11 +1,9 @@
 import { Module } from '@nestjs/common';
-import { SecurityService } from './security.service';
-import { HttpModule } from '@nestjs/axios';
+import { RateLimiterService } from './services/rate-limiter.service';
+import { RateLimitGuard } from './guards/rate-limit.guard';
 
 @Module({
-  imports: [HttpModule],
-  providers: [SecurityService],
-  exports: [SecurityService],
+  providers: [RateLimiterService, RateLimitGuard],
+  exports: [RateLimiterService, RateLimitGuard],
 })
-
 export class SecurityModule {} 
