@@ -7,6 +7,8 @@ import { Repository } from 'typeorm';
 import { StateService } from '../state/state.service';
 import { MailService } from '../mail/mail.service';
 import { State } from '../state/entities/state.entity';
+import { PasswordResetCode } from './entities/password-reset.entity';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class UserService {
@@ -17,6 +19,8 @@ export class UserService {
     private readonly stateRepository: Repository<State>,
     private readonly stateService: StateService,
     private readonly mailService: MailService,
+    @InjectRepository(PasswordResetCode)
+    private readonly passwordResetCodeRepository: Repository<PasswordResetCode>,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -121,26 +125,54 @@ export class UserService {
   }
   */
 
-  async requestPasswordReset(email: string): Promise<void> {
-    const user = await this.findByEmail(email);
+  async requestPasswordReset(email: string) {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new NotFoundException('Kullanıcı bulunamadı');
+    }
+
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     
-    this.stateService.saveTemporaryPassword(email, code);
-    const sent = await this.mailService.sendPasswordResetCode(email, code);
+    const passwordResetCode = this.passwordResetCodeRepository.create({
+      userId: user.id,
+      code,
+      isUsed: false,
+    });
     
-    if (!sent) {
-      throw new Error('Email gönderilemedi');
-    }
+    await this.passwordResetCodeRepository.save(passwordResetCode);
+    
+    // Email gönderme işlemi burada
+    return code;
   }
 
-  async verifyPasswordResetCode(email: string, code: string): Promise<boolean> {
-    console.log(email,code);
-    const isValid = this.stateService.verifyTemporaryPassword(email, code);
-    console.log(isValid);
-    if (!isValid) {
-      throw new UnauthorizedException('Geçersiz veya süresi dolmuş kod');
+  async verifyPasswordResetCode(email: string, code: string) {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new UnauthorizedException('Geçersiz kod veya email');
     }
-    return true;
+
+    const resetCode = await this.passwordResetCodeRepository.findOne({
+      where: {
+        userId: user.id,
+        code,
+        isUsed: false,
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!resetCode) {
+      throw new UnauthorizedException('Geçersiz kod veya email');
+    }
+
+    // Kodun 15 dakikadan eski olup olmadığını kontrol et
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+    if (resetCode.createdAt < fifteenMinutesAgo) {
+      throw new UnauthorizedException('Kod süresi dolmuş');
+    }
+
+    // Kodu kullanıldı olarak işaretle
+    resetCode.isUsed = true;
+    await this.passwordResetCodeRepository.save(resetCode);
   }
 
   async updatePassword(email: string, password: string): Promise<{ ok: boolean }> {
@@ -149,6 +181,17 @@ export class UserService {
     user.password = password;
     await this.userRepository.save(user);
     return { ok: true };
+  }
+
+  @Cron('0 */3 * * * *') // Her 3 dakikada bir çalışır
+  async cleanupExpiredResetCodes() {
+    const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
+    
+    await this.passwordResetCodeRepository
+      .createQueryBuilder()
+      .delete()
+      .where('createdAt < :threeMinutesAgo', { threeMinutesAgo })
+      .execute();
   }
 }
 
