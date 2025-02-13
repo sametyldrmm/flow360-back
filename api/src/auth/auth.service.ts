@@ -1,13 +1,9 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
-import * as bcrypt from 'bcrypt';
-import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
-
   constructor(
     private userService: UserService,
     private jwtService: JwtService,
@@ -20,19 +16,17 @@ export class AuthService {
       if (!user) {
         throw new UnauthorizedException('Kullanıcı bulunamadı');
       }
-
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) {
+      if (user.password !== password) {
         throw new UnauthorizedException('Şifre yanlış');
       }
 
       const { password: _, ...result } = user;
       return {
         ...result,
-        role: user.role || 'user'
+        role: user.role // Normal kullanıcılar için default rol
       };
     } catch (error) {
-      this.logger.error(`Kullanıcı doğrulama hatası: ${error.message}`);
+      console.error('Kullanıcı doğrulama hatası:', error);
       throw new UnauthorizedException('Kimlik doğrulama başarısız');
     }
   }
@@ -43,9 +37,7 @@ export class AuthService {
       id: user.id,
       role: user.role
     };
-    
-    this.logger.debug('Kullanıcı giriş yapıyor', { userId: user.id });
-    
+    console.log(payload);
     return {
       access_token: this.jwtService.sign(payload)
     };
