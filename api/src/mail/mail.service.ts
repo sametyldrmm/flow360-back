@@ -1,10 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { PasswordResetCode } from '../entities/password-reset-code.entity';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class MailService {
-  constructor() {}
+  constructor(
+    @InjectRepository(PasswordResetCode)
+    private passwordResetCodeRepository: Repository<PasswordResetCode>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+  ) {}
 
   private async getGmailClient() {
     const oauth2Client = new OAuth2Client(
@@ -60,14 +69,59 @@ export class MailService {
     }
   }
 
-  async sendPasswordResetCode(email: string, code: string) {
-    const message = `
-      Şifre Sıfırlama Kodunuz: ${code}
-      
-      Bu kod 5 dakika süreyle geçerlidir.
-    `;
+  async sendPasswordResetCode(email: string) {
+    console.log(email);
+    const user =  await this.userRepository.findOne({
+      where: { email }
+    });
+    console.log(user);
+    if (!user) {
+      throw new NotFoundException('Kullanıcı bulunamadı');
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log(code);
+    const passwordResetCode = this.passwordResetCodeRepository.create({
+      userId: user.id,
+      code,
+      isUsed: false,
+    });
+    console.log(code);
     
-    return this.sendEmail(email, message);
+    await this.passwordResetCodeRepository.save(passwordResetCode);
+    console.log(code);
+    
+    await this.sendEmail(email, `Şifre sıfırlama kodunuz: ${code}`);
+    console.log(code);
+    return code;
+  }
+
+  async verifyPasswordResetCode(email: string, code: string) {
+    const user = await this.userRepository.findOne({ where: { email },relations: { } });
+    if (!user) {
+      throw new UnauthorizedException('Geçersiz kod veya email');
+    }
+
+    const resetCode = await this.passwordResetCodeRepository.findOne({
+      where: {
+        userId: user.id,
+        code,
+        isUsed: false,
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!resetCode) {
+      throw new UnauthorizedException('Geçersiz kod veya email');
+    }
+
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+    if (resetCode.createdAt < fifteenMinutesAgo) {
+      throw new UnauthorizedException('Kod süresi dolmuş');
+    }
+
+    resetCode.isUsed = true;
+    await this.passwordResetCodeRepository.save(resetCode);
   }
 
   async refreshAccessToken() {

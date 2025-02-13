@@ -1,6 +1,4 @@
 import { ApiProperty } from "@nestjs/swagger";
-//import { Card } from "src/card/entities/card.entity";
-//import { Stok } from "src/stok/entities/stok.entity";
 import { Column, Entity, ManyToOne, OneToMany, PrimaryColumn, PrimaryGeneratedColumn,JoinColumn, OneToOne } from "typeorm";
 import { State } from '../../state/entities/state.entity';
 
@@ -47,6 +45,10 @@ export class User {
     @Column()
     public city: string;
 
+    @ApiProperty({type: String, description: 'Rol'})
+    @Column({default: 'user'})
+    public role: string;
+
     @ApiProperty({type: Boolean, description: 'KVKK Onayı'})
     @Column()
     public kvkk: boolean;
@@ -59,6 +61,6 @@ export class User {
     @Column({nullable: true})
     public youtube: string;
 
-    @OneToOne(() => State, state => state.user)
+    @OneToOne(() => State, state => state.user, {cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE', nullable: true})
     state: State;
 }

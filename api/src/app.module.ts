@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { StateModule } from './state/state.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SecurityModule } from './security/security.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { SecurityModule } from './security/security.module';
       isGlobal: true,
       envFilePath: '.env'
     }),
-    EnvModule, TypeormModule, UserModule, MailModule,AuthModule, StateModule, ScheduleModule.forRoot(), SecurityModule],
+    EnvModule, TypeormModule, UserModule, MailModule,AuthModule, StateModule, ScheduleModule.forRoot(), SecurityModule, AdminModule],
   controllers: [AppController],
   providers: [AppService],
 })

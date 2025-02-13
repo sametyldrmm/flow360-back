@@ -70,4 +70,8 @@ export class StateService {
       { formState }
     );
   }
+
+  async removeAll() {
+    return await this.stateRepository.delete({});
+  } 
 } 

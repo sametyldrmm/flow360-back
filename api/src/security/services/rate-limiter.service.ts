@@ -24,7 +24,6 @@ export class RateLimiterService {
   async checkRateLimit(ip: string): Promise<{ success: boolean }> {
     const now = Date.now();
     const rateLimit = this.rateLimits.get(ip) || { count: 0, firstRequest: now };
-
     // Pencere süresini kontrol et ve gerekirse sıfırla
     if (now - rateLimit.firstRequest > this.WINDOW_SIZE_IN_SECONDS * 1000) {
       rateLimit.count = 0;
@@ -32,9 +31,10 @@ export class RateLimiterService {
     }
 
     rateLimit.count++;
+    console.log(rateLimit.count);
     this.rateLimits.set(ip, rateLimit);
 
-    if (rateLimit.count > this.MAX_REQUESTS_PER_WINDOW) {
+    if (rateLimit.count > this.MAX_REQUESTS_PER_WINDOW ) {
       await this.incrementFailedAttempts(ip);
       return { success: false };
     }

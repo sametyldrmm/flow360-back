@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -115,8 +115,28 @@ export class UserService {
   }
 
   async remove(id: number) {
-    await this.stateRepository.delete({ user: { id } });
-    await this.userRepository.delete(id);
+    // ID'nin geçerli bir sayı olduğundan emin ol
+    if (isNaN(id) || !Number.isInteger(+id)) {
+      throw new BadRequestException('Geçersiz ID formatı');
+    }
+
+    // Önce kullanıcıyı state ilişkisiyle birlikte bul
+    const user = await this.userRepository.findOne({
+      where: { id: +id }, // ID'yi number'a çevir
+      relations: ['state']
+    });
+
+    if (!user) {
+      throw new NotFoundException('Kullanıcı bulunamadı');
+    }
+
+    // Eğer state varsa önce onu sil
+    if (user.state) {
+      await this.stateRepository.remove(user.state);
+    }
+
+    // Sonra kullanıcıyı sil
+    await this.userRepository.remove(user);
   }
 
   /*
@@ -126,53 +146,11 @@ export class UserService {
   */
 
   async requestPasswordReset(email: string) {
-    const user = await this.userRepository.findOne({ where: { email } });
-    if (!user) {
-      throw new NotFoundException('Kullanıcı bulunamadı');
-    }
-
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    const passwordResetCode = this.passwordResetCodeRepository.create({
-      userId: user.id,
-      code,
-      isUsed: false,
-    });
-    
-    await this.passwordResetCodeRepository.save(passwordResetCode);
-    
-    // Email gönderme işlemi burada
-    return code;
+    return this.mailService.sendPasswordResetCode(email);
   }
 
   async verifyPasswordResetCode(email: string, code: string) {
-    const user = await this.userRepository.findOne({ where: { email } });
-    if (!user) {
-      throw new UnauthorizedException('Geçersiz kod veya email');
-    }
-
-    const resetCode = await this.passwordResetCodeRepository.findOne({
-      where: {
-        userId: user.id,
-        code,
-        isUsed: false,
-      },
-      order: { createdAt: 'DESC' },
-    });
-
-    if (!resetCode) {
-      throw new UnauthorizedException('Geçersiz kod veya email');
-    }
-
-    // Kodun 15 dakikadan eski olup olmadığını kontrol et
-    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-    if (resetCode.createdAt < fifteenMinutesAgo) {
-      throw new UnauthorizedException('Kod süresi dolmuş');
-    }
-
-    // Kodu kullanıldı olarak işaretle
-    resetCode.isUsed = true;
-    await this.passwordResetCodeRepository.save(resetCode);
+    await this.mailService.verifyPasswordResetCode(email, code);
   }
 
   async updatePassword(email: string, password: string): Promise<{ ok: boolean }> {
@@ -192,6 +170,42 @@ export class UserService {
       .delete()
       .where('createdAt < :threeMinutesAgo', { threeMinutesAgo })
       .execute();
+  }
+
+  async removeAll() {
+    try {
+      // Tüm kullanıcıları state ilişkileriyle birlikte al
+      const users = await this.userRepository.find({
+        relations: ['state']
+      });
+
+      // Önce state'i olan kullanıcıların state'lerini sil
+      for (const user of users) {
+        try {
+          if (user.state) {
+            await this.stateRepository.remove(user.state);
+          }
+        } catch (error) {
+          console.log(`State silinirken hata: User ID ${user.id}`, error.message);
+          continue; // Hata olsa bile diğer kullanıcılara devam et
+        }
+      }
+
+      // Sonra tüm kullanıcıları sil
+      for (const user of users) {
+        try {
+          await this.userRepository.remove(user);
+        } catch (error) {
+          console.log(`Kullanıcı silinirken hata: User ID ${user.id}`, error.message);
+          continue; // Hata olsa bile diğer kullanıcılara devam et
+        }
+      }
+
+      return { success: true, message: 'Tüm kullanıcılar ve ilgili state\'ler silindi' };
+    } catch (error) {
+      console.log('Toplu silme işleminde hata:', error.message);
+      throw new InternalServerErrorException('Silme işlemi sırasında bir hata oluştu');
+    }
   }
 }
 

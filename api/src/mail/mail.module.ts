@@ -2,9 +2,15 @@ import { Module } from '@nestjs/common';
 import { MailService } from './mail.service';
 import { ConfigModule } from '@nestjs/config';
 import { MailController } from './mail.controller';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { PasswordResetCode } from '../entities/password-reset-code.entity';
+import { User } from '../user/entities/user.entity';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [
+    ConfigModule,
+    TypeOrmModule.forFeature([PasswordResetCode, User])
+  ],
   controllers: [MailController],
   providers: [MailService],
   exports: [MailService],
@@ -32,7 +38,4 @@ export class MailModule {}
 
   Kullanıcı Aşamaları - 
     Durumların hepsini
-
-
-
   */

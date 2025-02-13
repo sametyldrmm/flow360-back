@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional} from '@nestjs/swagger';
 import { IsString, IsEmail, IsBoolean, IsDateString, IsMobilePhone, Length, IsOptional } from 'class-validator';
 
 export class CreateUserDto {
@@ -48,6 +48,12 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   socialMedia?: string;
+
+  // role
+  @ApiProperty({ description: 'Kullanıcı rolü', example: 'user', default: 'user' })
+  @IsString()
+  @IsOptional()
+  role: string = 'user';
 
   @ApiPropertyOptional({ description: 'Youtube kanalı', example: '@ahmet_youtube' })
   @IsString()

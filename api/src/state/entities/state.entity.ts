@@ -6,13 +6,13 @@ export class State {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({default: false})
   formState: boolean; // boolda olabil
 
-  @Column()
+  @Column({default: "0"})
   voteState: string;
 
-  @Column()
+  @Column({default: false})
   priceState: boolean;
 
   @OneToOne(() => User, user => user.state)
