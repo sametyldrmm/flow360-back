@@ -63,4 +63,20 @@ export class User {
 
     @OneToOne(() => State, state => state.user, {cascade: true, onDelete: 'CASCADE', onUpdate: 'CASCADE', nullable: true})
     state: State;
+
+    // Şifrelenecek alanları belirten metod
+    encryptedFields() {
+        return [
+            'name',
+            'surname',
+            'email',
+            'tel',
+            'password',
+            'tc',
+            'birthDate',
+            'city',
+            'socialMedia',
+            'youtube'
+        ];
+    }
 }

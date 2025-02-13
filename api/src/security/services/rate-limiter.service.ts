@@ -21,6 +21,54 @@ export class RateLimiterService {
   private failedAttempts: Map<string, FailedAttempt> = new Map();
   private blacklist: Map<string, number> = new Map();
 
+  private readonly store = new Map<string, number[]>();
+  private readonly blacklistSet = new Set<string>();
+  
+  // Farklı endpoint'ler için farklı limitler
+  private readonly limits = {
+    auth: { windowMs: 15 * 60 * 1000, max: 5 }, // 15 dakikada 5 deneme
+    default: { windowMs: 60 * 1000, max: 30 }, // Dakikada 30 istek
+    admin: { windowMs: 60 * 1000, max: 10 } // Admin için daha sıkı limit
+  };
+
+  isRateLimited(ip: string, path: string): boolean {
+    if (this.blacklistSet.has(ip)) {
+      return true;
+    }
+
+    const now = Date.now();
+    const limit = this.getLimitForPath(path);
+    
+    if (!this.store.has(ip)) {
+      this.store.set(ip, [now]);
+      return false;
+    }
+
+    const requests = this.store.get(ip);
+    const windowStart = now - limit.windowMs;
+    
+    // Pencere dışındaki istekleri temizle
+    const recentRequests = requests.filter(time => time > windowStart);
+    this.store.set(ip, recentRequests);
+
+    if (recentRequests.length >= limit.max) {
+      // Çok fazla deneme varsa IP'yi karalisteye al
+      if (path.includes('/auth') && recentRequests.length >= limit.max * 2) {
+        this.addToBlacklist(ip);
+      }
+      return true;
+    }
+
+    recentRequests.push(now);
+    return false;
+  }
+
+  private getLimitForPath(path: string) {
+    if (path.includes('/auth')) return this.limits.auth;
+    if (path.includes('/admin')) return this.limits.admin;
+    return this.limits.default;
+  }
+
   async checkRateLimit(ip: string): Promise<{ success: boolean }> {
     const now = Date.now();
     const rateLimit = this.rateLimits.get(ip) || { count: 0, firstRequest: now };
@@ -62,6 +110,7 @@ export class RateLimiterService {
 
   async addToBlacklist(ip: string): Promise<void> {
     this.blacklist.set(ip, Date.now() + this.BLACKLIST_DURATION);
+    this.blacklistSet.add(ip);
   }
 
   async isBlacklisted(ip: string): Promise<boolean> {
@@ -70,6 +119,7 @@ export class RateLimiterService {
 
     if (Date.now() > expirationTime) {
       this.blacklist.delete(ip);
+      this.blacklistSet.delete(ip);
       return false;
     }
 
@@ -98,6 +148,7 @@ export class RateLimiterService {
     for (const [ip, expiration] of this.blacklist.entries()) {
       if (now > expiration) {
         this.blacklist.delete(ip);
+        this.blacklistSet.delete(ip);
       }
     }
   }

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CreateEnvDto } from 'src/env/dto/create-env.dto';
+import { EncryptionSubscriber } from './subscribers/encryption.subscriber';
 
 const env = new CreateEnvDto();
 @Module({
@@ -13,9 +14,10 @@ const env = new CreateEnvDto();
         database: env.DB_NAME,
         entities: [__dirname + '/../**/*.entity{.ts,.js}',__dirname + '/../**/**/*.entity{.ts,.js}'],
         synchronize: true, // Set to false in production
+        subscribers: [EncryptionSubscriber]
       })],
     controllers: [],
-    providers: [],
+    providers: [EncryptionSubscriber],
     exports: []
 })
 export class TypeormModule {}

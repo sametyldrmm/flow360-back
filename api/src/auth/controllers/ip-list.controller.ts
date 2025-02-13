@@ -2,16 +2,20 @@ import { Controller, Get, Post, Body, Delete, Param, UseGuards } from '@nestjs/c
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { IPListService } from '../services/ip-list.service';
 import { IPListType } from '../entities/ip-list.entity';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { IPListDto } from '../dto/ip-list.dto';
 
 @ApiTags('IP List')
+@ApiBearerAuth()
 @Controller('ip-list')
-//@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard)
 export class IPListController {
   constructor(private readonly ipListService: IPListService) {}
 
+  @ApiOperation({ summary: 'IP ekle' })
+  @ApiResponse({ status: 201, description: 'IP başarıyla eklendi' })
   @Post()
-  async addIp(@Body() data: { ip: string; type: IPListType; description?: string }) {
+  async addIp(@Body() data: IPListDto) {
     return this.ipListService.addIp(data);
   }
 

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -11,6 +11,7 @@ import { StateModule } from './state/state.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SecurityModule } from './security/security.module';
 import { AdminModule } from './admin/admin.module';
+import { SecurityMiddleware } from './security/middleware/security.middleware';
 
 @Module({
   imports: [
@@ -22,7 +23,13 @@ import { AdminModule } from './admin/admin.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(SecurityMiddleware)
+      .forRoutes('*');
+  }
+}
 
 // Kanka update bir tane error durumu koyucaz eğerki statelerde  ....
   
