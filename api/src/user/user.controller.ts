@@ -18,6 +18,36 @@ export class UserController {
     private readonly stateService: StateService
   ) {}
 
+  @Get('/completed-states')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Form ve fiyat durumu tamamlanmış kullanıcıları getir' })
+  @ApiResponse({
+    status: 200,
+    description: 'İşlemi tamamlanmış kullanıcılar başarıyla getirildi',
+    schema: {
+      example: [{
+        id: 1,
+        name: 'Ahmet',
+        surname: 'Yılmaz',
+        email: 'ahmet@example.com',
+        state: {
+          formState: true,
+          priceState: true
+        }
+      }]
+    }
+  })
+  async findCompletedUsers() {
+    this.logger.log('Form ve fiyat durumu tamamlanmış kullanıcılar listeleniyor');
+    try {
+      return await this.userService.findCompletedUsers();
+    } catch (error) {
+      this.logger.error(`Tamamlanmış kullanıcılar listelenirken hata: ${error.message}`);
+      throw new InternalServerErrorException('Kullanıcılar listelenirken bir hata oluştu');
+    }
+  }
+
   @Post()
   @ApiOperation({ summary: 'Yeni kullanıcı oluştur' })
   @ApiResponse({
@@ -238,7 +268,7 @@ export class UserController {
     const token = req.headers['authorization'].split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET) as { id: string };
     const user = await this.userService.findOne(+decoded.id);
-
+    console.log(user);
     if (user.role !== 'admin') {
       throw new ForbiddenException('Bu işlem için yetkiniz yok');
     }
@@ -246,10 +276,6 @@ export class UserController {
     return this.userService.update(+decoded.id, updateUserDto);
   }
   
-
-  
-
-
   @Post('password-reset/request')
   @HttpCode(200)
   @ApiOperation({ summary: 'Şifre sıfırlama kodu talep et' })
@@ -408,5 +434,6 @@ export class UserController {
 
     return this.stateService.updateFavori(+id, favori);
   }
+
 
 }

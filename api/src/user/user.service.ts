@@ -207,6 +207,15 @@ export class UserService {
       throw new InternalServerErrorException('Silme işlemi sırasında bir hata oluştu');
     }
   }
+
+  async findCompletedUsers(): Promise<User[]> {
+    return await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.state', 'state')
+      .where('state.formState = :formState', { formState: true })
+      .andWhere('state.priceState = :priceState', { priceState: true })
+      .getMany();
+  }
 }
 
 /*
