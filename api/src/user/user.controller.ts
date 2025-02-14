@@ -116,9 +116,12 @@ export class UserController {
     } catch (error) {
       this.logger.error(`Kullanıcılar listelenirken hata: ${error.message}`);
       if (error instanceof ForbiddenException) {
+        console.log("statusCode: 403",error);
         throw error;
       }
+      console.log("statusCode: 500",error);
       throw new InternalServerErrorException('Kullanıcılar listelenirken bir hata oluştu');
+      
     }
   }
 
@@ -194,7 +197,7 @@ export class UserController {
     if (user.role !== 'admin') {
       throw new ForbiddenException('Bu işlem için yetkiniz yok');
     }
-        
+
     return await this.userService.findOne(+id);
   }
 
@@ -300,11 +303,11 @@ export class UserController {
     } catch (error) {
       this.logger.error(`Kod doğrulama hatası: ${error.message}`);
       console.log("statusCode: 401");
-      return { statusCode: 401, message: 'Hata' };  
+      return { statusCode: 401, message: 'Hata',succes:false };  
     }
 
     console.log("statusCvvffode: 200");
-    return { statusCode: 200, message: 'Kod doğrulandı' };
+    return { statusCode: 200, message: 'Kod doğrulandı',succes:true };
   }
 
   @Get('email/:email')
@@ -359,6 +362,51 @@ export class UserController {
       this.logger.error(`Toplu silme işleminde hata: ${error.message}`);
       throw new InternalServerErrorException('Silme işlemi sırasında bir hata oluştu');
     }
+  }
+
+  @Patch('favori/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Kullanıcının favori durumunu güncelle' })
+  @ApiParam({
+    name: 'id',
+    description: 'Kullanıcı ID',
+    example: '1'
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        favori: {
+          type: 'boolean',
+          example: true
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Favori durumu başarıyla güncellendi'
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Bu işlem için yetkiniz yok'
+  })
+  async updateFavori(
+    @Param('id') id: string,
+    @Body('favori') favori: boolean,
+    @Request() req: Request
+  ) {
+    this.logger.log(`Kullanıcı favori durumu güncelleme isteği. Kullanıcı ID: ${id}`);
+    const token = req.headers['authorization'].split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as { id: string };
+    const user = await this.userService.findOne(+decoded.id);
+
+    if (user.role !== 'admin') {
+      throw new ForbiddenException('Bu işlem için yetkiniz yok');
+    }
+
+    return this.stateService.updateFavori(+id, favori);
   }
 
 }

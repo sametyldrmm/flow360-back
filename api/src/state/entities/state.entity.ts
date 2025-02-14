@@ -15,6 +15,9 @@ export class State {
   @Column({default: false})
   priceState: boolean;
 
+  @Column({ default: false })
+  favori: boolean;
+
   @OneToOne(() => User, user => user.state)
   @JoinColumn()
   user: User;

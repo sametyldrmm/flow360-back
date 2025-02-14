@@ -16,7 +16,7 @@ export class AdminController {
 
   @Get('users')
   async getAllUsers() {
-    this.logger.log('Tüm kullanıcılar listeleniyor');
+    this.logger.log('Admin: Tüm kullanıcılar listeleniyor');
     return this.adminService.getAllUsers();
   }
 
@@ -26,6 +26,11 @@ export class AdminController {
     return this.adminService.getSystemStats();
   }
 */
+  @Get('blacklist/ip')
+  async getBlacklist() {
+    this.logger.log('IP kara listesi görüntüleniyor');
+    return this.adminService.getBlacklist();
+  }
   @Post('blacklist/ip')
   async blacklistIP(@Body() body: { ip: string }) {
     this.logger.log(`IP adresi karalisteye ekleniyor: ${body.ip}`);

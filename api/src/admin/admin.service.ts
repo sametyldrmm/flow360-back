@@ -24,6 +24,10 @@ export class AdminService {
     return this.userService.findAll();
   }
 
+  async getBlacklist() {
+   // return this.rateLimiterService.getBlacklist();
+  }
+
   /*async getSystemStats() {
     // Sistem istatistiklerini döndür
     return {

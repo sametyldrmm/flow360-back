@@ -73,5 +73,14 @@ export class StateService {
 
   async removeAll() {
     return await this.stateRepository.delete({});
-  } 
+  }
+
+  async updateFavori(userId: number, favori: boolean) {
+    const state = await this.stateRepository.findOne({ where: { user: { id: userId } } });
+    if (!state) {
+      throw new NotFoundException('State bulunamadı');
+    }
+    state.favori = favori;
+    return this.stateRepository.save(state);
+  }
 } 

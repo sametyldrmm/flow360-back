@@ -13,7 +13,6 @@ export class AuthService {
     try {
       // Normal kullanıcı kontrolü
       const user = await this.userService.findByEmail(email);
-      console.log(user);  
       if (!user) {
         throw new UnauthorizedException('Kullanıcı bulunamadı');
       }
@@ -24,7 +23,7 @@ export class AuthService {
       const { password: _, ...result } = user;
       return {
         ...result,
-        role: 'user' // Normal kullanıcılar için default rol
+        role: user.role // Normal kullanıcılar için default rol
       };
     } catch (error) {
       console.error('Kullanıcı doğrulama hatası:', error);
@@ -38,12 +37,14 @@ export class AuthService {
       id: user.id,
       role: user.role
     };
-    console.log(payload);
-    console.log(payload);
-    console.log(payload);
-    console.log(payload);
+    
+    // log koy
+
+    const access_token = await this.jwtService.signAsync(payload, {
+      secret: process.env.JWT_SECRET
+    });
     return {
-      access_token: this.jwtService.sign(payload)
+      access_token
     };
   }
 } 

@@ -15,6 +15,7 @@ export class AuthController {
   @Post('login')
   @UseGuards(IpTrackingGuard)
   async login(@Body() loginDto: LoginDto) {
+    console.log("loginDto",loginDto);
     this.logger.log(`Giriş denemesi: ${loginDto.email}`);
 
     const user = await this.authService.validateUser(loginDto.email, loginDto.password);
@@ -24,7 +25,7 @@ export class AuthController {
       throw new UnauthorizedException('Geçersiz kimlik bilgileri');
     }
     
-    this.logger.log(`Başarılı giriş: ${loginDto.email}`);
+    this.logger.log(`Başarılı giriş: ${loginDto.email} , ${user.role}`);
     const result = await this.authService.login(user);
     return {
       statusCode: 200,
