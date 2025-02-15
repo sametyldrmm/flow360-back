@@ -1,25 +1,44 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import * as fs from 'fs';
+import * as path from 'path';
+import { Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const logger = new Logger('Bootstrap');
+
+  // SSL sertifikalarını yükle
+  const httpsOptions = {
+    key: fs.readFileSync(path.join(__dirname, '../ssl/private-key.pem')),
+    cert: fs.readFileSync(path.join(__dirname, '../ssl/public-cert.pem')),
+  };
+
+  // HTTPS ile uygulama oluştur
+  const app = await NestFactory.create(AppModule, {
+    httpsOptions,
+  });
+
+  // CORS ayarları
   app.enableCors({
-    origin: '*',
-    allowedHeaders: '*',
-    methods: '*',
+    origin: ['https://localhost:3000', 'http://localhost:3000'],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
-  
+
+  // Swagger yapılandırması
   const config = new DocumentBuilder()
-    .setTitle('User API')
-    .setDescription('User Management API')
+    .setTitle('Flow360 API')
+    .setDescription('Flow360 REST API documentation')
     .setVersion('1.0')
-    .addTag('users')
+    .addBearerAuth()
     .build();
   
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
-  await app.listen(3000);
+
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  logger.log(`Uygulama HTTPS üzerinden ${port} portunda çalışıyor`);
 }
 bootstrap();
