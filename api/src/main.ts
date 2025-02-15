@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import * as express from 'express';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -18,6 +19,9 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     httpsOptions,
   });
+
+  // SSL doğrulama dosyası için statik klasör ayarla
+  app.use('/.well-known/pki-validation', express.static(path.join(__dirname, '.well-known/pki-validation')));
 
   // CORS ayarları
   app.enableCors({
@@ -37,7 +41,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 443;
   await app.listen(port);
   logger.log(`Uygulama HTTPS üzerinden ${port} portunda çalışıyor`);
 }
