@@ -25,9 +25,11 @@ async function bootstrap() {
 
   // CORS ayarları
   app.enableCors({
-    origin: ['https://localhost:3000', 'http://localhost:3000'],
+    origin: ['https://flow360.tr', 'http://flow360.tr', 'https://18.198.243.156'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
+    allowedHeaders: 'Origin,X-Requested-With,Content-Type,Accept,Authorization',
+    exposedHeaders: 'Authorization',
   });
 
   // Swagger yapılandırması
