@@ -1,0 +1,5 @@
+mkdir api/ssl
+cd api/ssl
+openssl req -x509 -newkey rsa:4096 -keyout private-key.pem -out public-cert.pem -days 365 -nodes
+mkdir -p api/src/.well-known/pki-validation
+cp api/src/0A26C5FB77B4D9E26D291A254790194D.txt api/src/.well-known/pki-validation/
