@@ -11,8 +11,8 @@ async function bootstrap() {
 
   // SSL sertifikalarını yükle
   const httpsOptions = {
-    key: fs.readFileSync(path.join(__dirname, '../ssl/private-key.pem')),
-    cert: fs.readFileSync(path.join(__dirname, '../ssl/public-cert.pem')),
+    key: fs.readFileSync(path.join("", '/home/ubuntu/flow360/flow360/flow360.key')),
+    cert: fs.readFileSync(path.join( "",'/home/ubuntu/flow360/flow360/flow360tr.crt')),
   };
 
   // HTTPS ile uygulama oluştur
@@ -43,7 +43,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  const port = process.env.PORT || 443;
+  const port =  4443;
   await app.listen(port);
   logger.log(`Uygulama HTTPS üzerinden ${port} portunda çalışıyor`);
 }
